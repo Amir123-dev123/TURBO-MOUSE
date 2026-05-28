@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Turbo Mouse - Ultra Edition</title>
+<style>
+  #wrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:1rem 0; font-family: sans-serif; user-select: none; background: #0b0914; color: #fff; min-height: 100vh; position: relative; }
+  #game-container { position: relative; }
+  #game-canvas { border:2px solid #5A8F35; border-radius: 12px; display:block; cursor:none; box-shadow: 0 0 20px rgba(90, 143, 53, 0.3); }
+  
+  /* עיצוב מסך פתיחה */
+  #start-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 3vh; gap: 15px; }
+  .title { font-size: 70px; color: #ffb703; margin-bottom: 0px; text-shadow: 0 0 25px #ffb703; font-family: 'Arial Black', sans-serif; font-weight: 900; letter-spacing: 4px; }
+  
+  /* תצוגת גביעים במסך הראשי */
+  .trophy-counter { font-size: 22px; color: #9EFF4A; background: rgba(158, 255, 74, 0.15); padding: 8px 25px; border-radius: 30px; border: 1px solid #9EFF4A; box-shadow: 0 0 15px rgba(158, 255, 74, 0.2); font-weight: bold; margin-bottom: 10px; }
+  
+  .char-grid { display: flex; gap: 15px; margin-bottom: 10px; justify-content: center; width: 100%; max-width: 950px; flex-wrap: wrap; }
+  .char-card { background: #141226; border: 2px solid #332e59; border-radius: 16px; padding: 15px; width: 130px; text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+  .char-card:hover:not(.locked) { border-color: #5A8F35; transform: translateY(-5px); box-shadow: 0 12px 20px rgba(90,143,53,0.3); }
+  .char-card.active { border-color: #9EFF4A; background: #221f3b; box-shadow: 0 0 20px rgba(158, 255, 74, 0.5); }
+  .char-card.locked { opacity: 0.35; filter: grayscale(0.8); cursor: not-allowed; border-color: #221f3b; }
+  .char-emoji { font-size: 40px; margin-bottom: 10px; }
+  .char-name { font-weight: bold; font-size: 13px; color: #fff; margin-bottom: 8px; height: 34px; display: flex; align-items: center; justify-content: center; }
+  .char-req { font-size: 11px; color: #ffb703; background: rgba(255,183,3,0.1); padding: 4px 8px; border-radius: 20px; font-weight: bold; }
+  .char-card.locked .char-req { color: #ef4444; background: rgba(239,68,68,0.1); }
+  .btn-start { padding: 18px 50px; font-size: 24px; font-weight: bold; background: #5A8F35; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 15px rgba(90, 143, 53, 0.4); transition: all 0.2s; letter-spacing: 1px; margin-bottom: 5px; }
+  .btn-start:hover { background: #7FAF43; transform: scale(1.03); }
+  .credit { color: #4d4680; font-weight: bold; font-size: 15px; letter-spacing: 1px; margin-top: 5px; }
+
+  /* סרגל שדרוגים ונגן מוזיקה */
+  .control-panel { display:flex; gap:15px; align-items:center; flex-wrap: wrap; background: #141226; padding: 10px 20px; border-radius: 12px; border: 1px solid #332e59; margin-bottom: 5px; justify-content: center; }
+  .upgrade-zone { display:flex; gap:10px; align-items:center; }
+  .weapon-badge { padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; background: #221f3b; color: #ffb703; border: 1px solid #ffb703; box-shadow: 0 0 10px rgba(255, 183, 3, 0.2); }
+  .next-upgrade { font-size: 13px; color: #a09cc0; }
+
+  /* עיצוב נגן המוזיקה */
+  .music-player { display: flex; align-items: center; gap: 8px; border-left: 2px solid #332e59; padding-left: 15px; }
+  .music-btn { background: #5A8F35; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+  .music-btn:hover { background: #7FAF43; }
+  .file-input-label { background: #332e59; color: #d8d5f2; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; border: 1px solid #4d4680; }
+  .file-input-label:hover { background: #453e73; }
+  #music-upload { display: none; }
+  .volume-slider { width: 70px; accent-color: #5A8F35; cursor: pointer; }
+
+  .hint { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; max-width: 640px; text-align: center; line-height: 1.6; font-size: 13px; color: #a09cc0; }
+  .key { background:#221f3b; border:1px solid #4d4680; border-radius:6px; padding:3px 9px; font-size:12px; color:#fff; font-family: monospace; font-weight: bold; box-shadow: 0 2px 0 #110f21; }
+  #status { font-size:14px; color:#9EFF4A; font-weight: bold; min-height:18px; text-shadow: 0 0 8px rgba(158, 255, 74, 0.5); }
+  #stats-bar { display:flex; gap:25px; align-items:center; font-size:15px; font-weight:bold; color:#fff; margin-bottom: 5px; background: #141226; padding: 8px 20px; border-radius: 10px; border: 1px solid #332e59; }
+  #stage-badge { background: #ffb703; color: #111; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  
+  /* מסכי פופ-אפ */
+  .overlay-screen {
+    position: absolute;
+    top: 0; left: 0; width: 640px; height: 420px;
+    background: rgba(11, 9, 20, 0.92);
+    border-radius: 12px;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    z-index: 10;
+  }
+  .overlay-screen h2 { margin: 0; font-size: 36px; text-shadow: 0 0 15px rgba(255, 77, 77, 0.4); }
+  #game-over-screen h2 { color: #ff4d4d; }
+  #pause-screen h2 { color: #ffb703; text-shadow: 0 0 15px rgba(255, 183, 3, 0.4); }
+  #victory-screen h2 { color: #9EFF4A; text-shadow: 0 0 25px rgba(158, 255, 74, 0.6); }
+  
+  .menu-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  .menu-btn:active { transform: scale(0.98); }
+  #continue-btn { background: #4CAF50; color: white; }
+  #continue-btn:hover { background: #45a049; }
+  #continue-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+  #restart-btn, #resume-btn { background: #f44336; color: white; }
+  #restart-btn:hover { background: #da190b; }
+  #resume-btn { background: #ffb703; color: #111; }
+  #resume-btn:hover { background: #e0a102; }
+  
+  /* כפתורי מסך ניצחון והפסד */
+  .btn-next-stage { background: #9EFF4A; color: #0b0914; font-size: 16px; font-weight: bold; }
+  .btn-next-stage:hover { background: #bdff7d; }
+  .btn-lobby { background: #332e59; color: white; font-size: 14px; }
+  .btn-lobby:hover { background: #453e73; }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="start-screen">
+    <div class="title">TURBO MOUSE</div>
+    <div id="lobby-trophies" class="trophy-counter">🏆 גביעים שצברת: 0</div>
+    <div class="char-grid" id="char-selection"></div>
+    <button class="btn-start" onclick="startGame()">התחל לשחק 🎮</button>
+    <div class="credit">BY AMIR LEVI</div>
+  </div>
+
+  <div id="game-content" style="display: none; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
+    <div class="control-panel">
+      <div class="upgrade-zone">
+        <span>🔫 נשק:</span>
+        <span id="weapon-level-badge" class="weapon-badge">רמה 1: רובה גבינה רקובה 🫓</span>
+        <span id="next-upgrade-text" class="next-upgrade">(שדרוג ב-10 🧀)</span>
+      </div>
+      
+      <div class="music-player">
+        🎵 <label for="music-upload" class="file-input-label">בחר שיר רקע 📂</label>
+        <input type="file" id="music-upload" accept="audio/*">
+        <button id="play-pause-music" class="music-btn" disabled>נגן ⏸️</button>
+        <input type="range" id="music-volume" class="volume-slider" min="0" max="1" step="0.05" value="0.5">
+      </div>
+    </div>
+    
+    <div id="stats-bar">
+      <div id="stage-badge">שלב 1</div>
+      <div id="score-display">🧀 גבינות: 0 / 25</div>
+      <div id="cats-display">😾 חתולים שהובסו: 0 / 25</div>
+      <div id="lives-display">❤️ חיים: ❤️❤️❤️</div>
+      <div id="status"></div>
+    </div>
+
+    <div id="game-container">
+      <canvas id="game-canvas" width="640" height="420" tabindex="0"></canvas>
+      
+      <div id="game-over-screen" class="overlay-screen">
+        <h2>המשחק נגמר! 💀</h2>
+        <p id="game-over-msg"></p>
+        <button id="continue-btn" class="menu-btn"></button>
+        <button id="restart-btn" class="menu-btn">התחל מהתחלה 🔄</button>
+        <button id="gameover-lobby-btn" class="menu-btn btn-lobby">חזור ללובי הראשי 🏛️</button>
+      </div>
+
+      <div id="pause-screen" class="overlay-screen">
+        <h2>המשחק נעצר ⏸️</h2>
+        <p>המשחק בהשהיה. לחץ על P פעם נוספת (או לחץ על הכפתור) כדי לחזור</p>
+        <button id="resume-btn" class="menu-btn">חזור למשחק 🎮</button>
+      </div>
+
+      <div id="victory-screen" class="overlay-screen">
+        <h2 id="victory-title">שלב הושלם בהצלחה! 🎉🏆</h2>
+        <p id="victory-msg">איזה שחקן תותח! עברת את האתגר של השלב!</p>
+        <button id="next-stage-btn" class="menu-btn btn-next-stage">המשך לשלב הבא (שומר על הנשק!) 🚀</button>
+        <button id="lobby-btn" class="menu-btn btn-lobby">חזור ללובי הראשי 🏛️</button>
+      </div>
+    </div>
+
+    <div class="hint">
+      <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> תנועה &nbsp;|&nbsp;
+      <span class="key">Space</span> ירי גבינה רקובה 🤢 &nbsp;|&nbsp; 
+      <span class="key">W</span> פצצה היקפית (טעינה של 10 שניות ⏱️) &nbsp;|&nbsp;
+      <span class="key">P</span> עצירה / השהיית המשחק ⏸️
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game-canvas');
+const canvasContext = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// מערכת צבירת ניצחונות ודמויות
+let tmWins = parseInt(localStorage.getItem('tm_wins')) || 0;
+let selectedChar = localStorage.getItem('tm_selected_char') || 'mouse';
+
+const characterOptions = [
+  { id: 'mouse', name: 'עכבר מחשב', emoji: '🖱️', req: 0 },
+  { id: 'bike', name: 'עכבר על אופנוע מעופף', emoji: '🏍️💨', req: 1 },
+  { id: 'cheese_char', name: 'גבינה צהובה עם חורים', emoji: '🧀', req: 2 },
+  { id: 'realistic', name: 'עכבר מציאותי', emoji: '🐀', req: 3 },
+  { id: 'cat_costume', name: 'עכבר בתחפושת חתול', emoji: '🥷🐱', req: 4 },
+  { id: 'radioactive', name: 'עכבר ראדיואקטיבי', emoji: '☣️', req: 5 },
+  { id: 'flying_car', name: 'עכבר במכונית מעופפת', emoji: '🏎️💨', req: 6 },
+  { id: 'spaceship', name: 'חללית עכברים קוסמית', emoji: '🚀', req: 7 }
+];
+
+let score = 0;
+let catScore = 0; 
+let lives = 3;
+let isGameOver = false;
+let isPaused = false;
+let currentStage = 1;
+let cheatUsed = false;
+let cheatInputBuffer = "";
+
+function getTargetGoal() {
+  if (currentStage === 1) return 25;
+  if (currentStage === 2) return 23;
+  if (currentStage === 3) return 20;
+  return 25;
+}
+
+let isVictoryAnimating = false;
+let victoryTimer = 0;
+let victoryAngle = 0;
+
+let turboTimer = 0;
+let TURBO_DURATION = 180;
+let weaponLevel = 1;
+let lastWTime = 0; 
+
+let wAttackVisual = { radius: 0, maxRadius: 0, active: false, x: 0, y: 0 };
+
+let mx = W/2, my = H/2;
+let vx = 0, vy = 0;
+let baseSpeed = 5;
+let keys = {};
+let mouseAngle = -Math.PI / 2; 
+
+let trail = [];
+let particles = [];
+let cheeses = [];
+let cats = [];
+let rottenCheeses = [];
+let enemyProjectiles = []; 
+
+// ניהול מוזיקה וצלילים
+let audioBg = new Audio();
+audioBg.loop = true;
+
+const musicUpload = document.getElementById('music-upload');
+const playPauseMusicBtn = document.getElementById('play-pause-music');
+const musicVolume = document.getElementById('music-volume');
+
+musicUpload.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const url = URL.createObjectURL(file);
+    audioBg.src = url;
+    audioBg.volume = musicVolume.value;
+    audioBg.play().catch(err => console.log("Audio play blocked"));
+    playPauseMusicBtn.disabled = false;
+    playPauseMusicBtn.textContent = "השתק 🔇";
+    canvas.focus();
+  }
+});
+
+playPauseMusicBtn.addEventListener('click', () => {
+  if (audioBg.paused) {
+    audioBg.play();
+    playPauseMusicBtn.textContent = "השתק 🔇";
+  } else {
+    audioBg.pause();
+    playPauseMusicBtn.textContent = "נגן ▶️";
+  }
+  canvas.focus();
+});
+
+musicVolume.addEventListener('input', (e) => { audioBg.volume = e.target.value; });
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  
+  if (type === 'eat') {
+    const osc = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc2.type = 'triangle';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(750, now + 0.15);
+    osc2.frequency.setValueAtTime(140, now);
+    osc2.frequency.exponentialRampToValueAtTime(375, now + 0.15);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain); osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now); osc2.start(now);
+    osc.stop(now + 0.15); osc2.stop(now + 0.15);
+  } 
+  else if (type === 'shoot') {
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(380, now);
+    osc.frequency.linearRampToValueAtTime(80, now + 0.12);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, now);
+    filter.frequency.linearRampToValueAtTime(200, now + 0.12);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.linearRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(filter); filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.12);
+  } 
+  else if (type === 'hit') {
+    const osc = audioCtx.createOscillator();
+    const noise = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.linearRampToValueAtTime(40, now + 0.25);
+    noise.type = 'triangle';
+    noise.frequency.setValueAtTime(90, now);
+    noise.frequency.linearRampToValueAtTime(20, now + 0.25);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.connect(gain); noise.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now); noise.start(now);
+    osc.stop(now + 0.25); noise.stop(now + 0.25);
+  } 
+  else if (type === 'upgrade') {
+    const notes = [261.6, 329.6, 392.0, 523.3];
+    notes.forEach((freq, index) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + index * 0.06);
+      gain.gain.setValueAtTime(0.1, now + index * 0.06);
+      gain.gain.linearRampToValueAtTime(0.001, now + index * 0.06 + 0.2);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(now + index * 0.06); osc.stop(now + index * 0.06 + 0.2);
+    });
+  }
+  else if (type === 'wAttack') {
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.linearRampToValueAtTime(25, now + 0.6);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(600, now);
+    filter.frequency.linearRampToValueAtTime(80, now + 0.6);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.connect(filter); filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.6);
+  }
+  else if (type === 'gameover') {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(200, now);
+    o.frequency.linearRampToValueAtTime(50, now + 0.6);
+    g.gain.setValueAtTime(0.25, now); g.gain.linearRampToValueAtTime(0.001, now + 0.6);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(now); o.stop(now + 0.6);
+  }
+}
+
+let stars = Array.from({length:60}, () => ({
+  x: Math.random()*W, y: Math.random()*H,
+  r: Math.random()*2+0.4,
+  blink: Math.random()*Math.PI*2
+}));
+
+function spawnCheese() {
+  const margin = 40;
+  cheeses.push({
+    x: margin + Math.random()*(W - margin*2),
+    y: margin + Math.random()*(H - margin*2),
+    r: 18 + Math.random()*8,
+    angle: Math.random()*Math.PI*2,
+    bobPhase: Math.random()*Math.PI*2,
+    collected: false,
+    scale: 0, 
+  });
+}
+for (let i=0; i<6; i++) spawnCheese();
+
+function spawnCat() {
+  if (isGameOver || isPaused || isVictoryAnimating || document.getElementById('start-screen').style.display !== 'none') return;
+  if (currentStage === 2) return; 
+  if (cats.filter(c => c.type === 'red').length >= 3) return; 
+
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+  if (side === 0) { x = Math.random() * W; y = -20; }
+  else if (side === 1) { x = W + 20; y = Math.random() * H; }
+  else if (side === 2) { x = Math.random() * W; y = H + 20; }
+  else { x = -20; y = Math.random() * H; }
+
+  const speedBonus = weaponLevel * 0.08;
+  cats.push({
+    type: 'red',
+    x: x, y: y,
+    speed: 0.4 + Math.random() * 0.5 + speedBonus,
+    r: 17,
+    angle: 0
+  });
+}
+setInterval(spawnCat, 2000);
+
+function spawnTeleportCat() {
+  if (isGameOver || isPaused || isVictoryAnimating || currentStage === 1) return;
+  if (cats.filter(c => c.type === 'teleport').length >= 2) return; 
+
+  const rx = 60 + Math.random() * (W - 120);
+  const ry = 60 + Math.random() * (H - 120);
+
+  cats.push({
+    type: 'teleport',
+    x: rx, y: ry,
+    r: 20,
+    angle: 0,
+    shootTimer: 120 
+  });
+  burst(rx, ry, false);
+}
+setInterval(() => {
+  if(currentStage === 2 || currentStage === 3) spawnTeleportCat();
+}, 3000);
+
+function burst(x, y, isRotten = false) {
+  const colors = isRotten ? ['#5A8F35','#7FAF43','#3E6B21','#9EFF4A'] : ['#EF9F27','#FAC775','#F0997B','#FFFFFF'];
+  for (let i=0; i<18; i++) {
+    const a = (i/18)*Math.PI*2;
+    const spd = 2 + Math.random()*5;
+    particles.push({
+      type: 'sparkle',
+      x, y,
+      vx: Math.cos(a)*spd,
+      vy: Math.sin(a)*spd,
+      life: 1,
+      decay: 0.03 + Math.random()*0.02,
+      r: 3 + Math.random()*4,
+      color: colors[Math.floor(Math.random()*colors.length)]
+    });
+  }
+}
+
+function checkWeaponUpgrade() {
+  let oldLevel = weaponLevel;
+  
+  if (currentStage === 1) {
+    if (score >= 20) weaponLevel = 5;
+    else if (score >= 15) weaponLevel = 4;
+    else if (score >= 10) weaponLevel = 3;
+    else if (score >= 5) weaponLevel = 2;
+    else weaponLevel = Math.max(1, weaponLevel);
+  } else {
+    if (score >= 20) weaponLevel = 8;
+    else if (score >= 12) weaponLevel = 7;
+    else if (score >= 6) weaponLevel = 6;
+  }
+
+  const badge = document.getElementById('weapon-level-badge');
+  const nextTxt = document.getElementById('next-upgrade-text');
+
+  const names = {
+    1: "רמה 1: רובה גבינה רקובה 🫓",
+    2: "רמה 2: פגז גבינה מהיר ⚡",
+    3: "רמה 3: ירי גבינה כפול 🖖",
+    4: "רמה 4: מטח גבינות משולש 🔱",
+    5: "רמה 5: מקלע גבינה מטורף 🔫",
+    6: "רמה 6: מקלע גבינה סילונית כפול 🌀",
+    7: "רמה 7: פצצת גבינות מרובעת 💠",
+    8: "רמה מקסימלית: לייזר גבינה גרעיני רציף ☣️"
+  };
+
+  badge.textContent = names[weaponLevel];
+
+  if (weaponLevel === 5 && currentStage === 1) {
+    nextTxt.textContent = "(רמה מקסימלית לשלב 1! 🛡️)";
+  } else if (weaponLevel === 8) {
+    nextTxt.textContent = "(הגעת לעוצמה המוחלטת! 🔥)";
+  } else {
+    let nextThreshold = 5;
+    if (currentStage === 1) {
+      if (weaponLevel === 1) nextThreshold = 5;
+      else if (weaponLevel === 2) nextThreshold = 10;
+      else if (weaponLevel === 3) nextThreshold = 15;
+      else if (weaponLevel === 4) nextThreshold = 20;
+    } else {
+      if (weaponLevel < 6) nextThreshold = 6;
+      else if (weaponLevel === 6) nextThreshold = 12;
+      else if (weaponLevel === 7) nextThreshold = 20;
+    }
+    nextTxt.textContent = `(שדרוג ב-${nextThreshold} 🧀)`;
+  }
+
+  if (weaponLevel > oldLevel) {
+    playSound('upgrade');
+    document.getElementById('status').textContent = `🚀 הנשק שודרג לרמה ${weaponLevel}!`;
+    setTimeout(() => { document.getElementById('status').textContent = ''; }, 2500);
+  }
+}
+
+function createRottenCheese(angle, speed = 9, radius = 10) {
+  rottenCheeses.push({
+    x: mx, y: my,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    r: radius,
+    angle: Math.random() * Math.PI
+  });
+}
+
+function shootRottenCheese() {
+  if (isGameOver || isPaused || isVictoryAnimating) return;
+  playSound('shoot');
+
+  if (weaponLevel === 1) {
+    createRottenCheese(mouseAngle, 9, 10);
+  } 
+  else if (weaponLevel === 2) {
+    createRottenCheese(mouseAngle, 13, 14);
+  } 
+  else if (weaponLevel === 3) {
+    createRottenCheese(mouseAngle - 0.15, 10, 11);
+    createRottenCheese(mouseAngle + 0.15, 10, 11);
+  } 
+  else if (weaponLevel === 4) {
+    createRottenCheese(mouseAngle - 0.3, 10, 11);
+    createRottenCheese(mouseAngle, 11, 11);
+    createRottenCheese(mouseAngle + 0.3, 10, 11);
+  } 
+  else if (weaponLevel === 5) {
+    createRottenCheese(mouseAngle - 0.1, 13, 10);
+    createRottenCheese(mouseAngle, 14, 10);
+    createRottenCheese(mouseAngle + 0.1, 13, 10);
+  }
+  else if (weaponLevel === 6) {
+    createRottenCheese(mouseAngle - 0.08, 15, 9);
+    createRottenCheese(mouseAngle + 0.08, 15, 9);
+    setTimeout(() => { if(!isGameOver && !isPaused) { createRottenCheese(mouseAngle, 16, 8); } }, 50);
+  }
+  else if (weaponLevel === 7) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      createRottenCheese(mouseAngle + a, 11, 12);
+    }
+  }
+  else if (weaponLevel === 8) {
+    for (let i = 0; i < 3; i++) {
+      createRottenCheese(mouseAngle + (Math.random() - 0.5) * 0.12, 18, 13);
+    }
+  }
+}
+
+function triggerWAttack() {
+  if (isGameOver || isPaused || isVictoryAnimating) return;
+
+  const now = Date.now();
+  const cooldown = 10000; 
+  if (now - lastWTime < cooldown) {
+    const remaining = Math.ceil((cooldown - (now - lastWTime)) / 1000);
+    document.getElementById('status').textContent = `❌ פצצה בטעינה! המתן עוד ${remaining} שניות`;
+    setTimeout(() => { document.getElementById('status').textContent = ''; }, 1500);
+    return;
+  }
+
+  lastWTime = now;
+  playSound('wAttack');
+  
+  wAttackVisual.active = true;
+  wAttackVisual.x = mx; wAttackVisual.y = my;
+  wAttackVisual.radius = 10;
+  wAttackVisual.maxRadius = Math.max(W, H) * 1.3;
+
+  cats.forEach(cat => { 
+    burst(cat.x, cat.y, true); 
+    catScore++; 
+  });
+  
+  cats = [];
+  enemyProjectiles = [];
+  
+  const target = getTargetGoal();
+  document.getElementById('cats-display').textContent = `😾 חתולים שהובסו: ${catScore} / ${target}`;
+  
+  if (score >= target && catScore >= target) {
+    triggerStageVictory();
+  }
+  
+  document.getElementById('status').textContent = '☢️ בום! הפעלת פצצה היקפית והבסת את כל החתולים במפה!';
+  setTimeout(() => { document.getElementById('status').textContent = ''; }, 2000);
+}
+
+function togglePause() {
+  if (isGameOver || isVictoryAnimating) return;
+  isPaused = !isPaused;
+  const pauseScreen = document.getElementById('pause-screen');
+  if (isPaused) {
+    pauseScreen.style.display = 'flex';
+  } else {
+    pauseScreen.style.display = 'none';
+    canvas.focus();
+  }
+}
+
+document.getElementById('resume-btn').addEventListener('click', () => {
+  if (isPaused) togglePause();
+});
+
+function updateLivesDisplay() {
+  document.getElementById('lives-display').textContent = '❤️ חיים: ' + '❤️'.repeat(lives);
+}
+
+function handleCatHit() {
+  if(isVictoryAnimating) return;
+  lives--;
+  updateLivesDisplay();
+  
+  if (lives <= 0) {
+    playSound('gameover');
+    showGameOverScreen();
+  } else {
+    playSound('hit');
+    cats = [];
+    enemyProjectiles = [];
+    document.getElementById('status').textContent = '💥 אאוץ\'! אויב פגע בך!';
+    setTimeout(() => { document.getElementById('status').textContent = ''; }, 1500);
+  }
+}
+
+function showGameOverScreen() {
+  isGameOver = true;
+  const screen = document.getElementById('game-over-screen');
+  const continueBtn = document.getElementById('continue-btn');
+  
+  document.getElementById('game-over-msg').textContent = `צברת ${score} גבינות והבסת ${catScore} חתולים בשלב זה.`;
+  continueBtn.textContent = `המשך תמורת 3 חתולים שהבסת (נשאר עם חיים 1)`;
+  
+  if (catScore >= 3) {
+    continueBtn.disabled = false;
+  } else {
+    continueBtn.disabled = true;
+    continueBtn.textContent += ` [אין מספיק נקודות]`;
+  }
+  screen.style.display = 'flex';
+}
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  catScore -= 3;
+  lives = 1;
+  isGameOver = false;
+  cats = []; rottenCheeses = []; enemyProjectiles = [];
+  const target = getTargetGoal();
+  document.getElementById('cats-display').textContent = `😾 חתולים שהובסו: ${catScore} / ${target}`;
+  updateLivesDisplay();
+  document.getElementById('game-over-screen').style.display = 'none';
+  canvas.focus();
+});
+
+function resetGameState(fullReset = true) {
+  score = 0; 
+  catScore = 0; 
+  lives = 3; 
+  turboTimer = 0; 
+  lastWTime = 0;
+  cats = []; rottenCheeses = []; enemyProjectiles = []; isGameOver = false; isPaused = false;
+  isVictoryAnimating = false; victoryTimer = 0; victoryAngle = 0;
+  wAttackVisual.active = false;
+  mx = W/2; my = H/2; vx = 0; vy = 0; mouseAngle = -Math.PI / 2;
+  
+  if(fullReset) {
+    weaponLevel = 1;
+    currentStage = 1;
+  }
+  
+  const target = getTargetGoal();
+  document.getElementById('stage-badge').textContent = `שלב ${currentStage}`;
+  document.getElementById('score-display').textContent = `🧀 גבינות: ${score} / ${target}`;
+  document.getElementById('cats-display').textContent = `😾 חתולים שהובסו: ${catScore} / ${target}`;
+  checkWeaponUpgrade();
+  updateLivesDisplay();
+  document.getElementById('game-over-screen').style.display = 'none';
+  document.getElementById('pause-screen').style.display = 'none';
+  document.getElementById('victory-screen').style.display = 'none';
+}
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  resetGameState(true);
+  canvas.focus();
+});
+
+document.getElementById('next-stage-btn').addEventListener('click', () => {
+  if (currentStage === 1) {
+    currentStage = 2;
+  } else if (currentStage === 2) {
+    currentStage = 3;
+  }
+  resetGameState(false); 
+  checkWeaponUpgrade();
+  canvas.focus();
+});
+
+document.getElementById('lobby-btn').addEventListener('click', () => {
+  returnToMenu();
+});
+
+document.getElementById('gameover-lobby-btn').addEventListener('click', () => {
+  returnToMenu();
+});
+
+function returnToMenu() {
+  document.getElementById('start-screen').style.display = 'flex';
+  document.getElementById('game-content').style.display = 'none';
+  resetGameState(true);
+  renderMenu();
+}
+
+function renderMenu() {
+  document.getElementById('lobby-trophies').textContent = `🏆 גביעים שצברת: ${tmWins}`;
+  
+  const container = document.getElementById('char-selection');
+  container.innerHTML = '';
+  
+  characterOptions.forEach(char => {
+    const isUnlocked = tmWins >= char.req;
+    const card = document.createElement('div');
+    card.className = `char-card ${isUnlocked ? '' : 'locked'} ${selectedChar === char.id ? 'active' : ''}`;
+    
+    card.innerHTML = `
+      <div class="char-emoji">${char.emoji}</div>
+      <div class="char-name">${char.name}</div>
+      <div class="char-req">${isUnlocked ? 'פתוח לשימוש!' : `נעול (דרוש ${char.req} גביעים)`}</div>
+    `;
+    
+    if (isUnlocked) {
+      card.onclick = () => {
+        selectedChar = char.id;
+        localStorage.setItem('tm_selected_char', selectedChar);
+        renderMenu();
+      };
+    }
+    container.appendChild(card);
+  });
+}
+
+function startGame() {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-content').style.display = 'flex';
+  resetGameState(true);
+  canvas.focus();
+}
+
+function triggerStageVictory() {
+  isVictoryAnimating = true;
+  victoryTimer = 180; 
+  document.getElementById('status').textContent = '⭐ ניצחון מוחלט! הדמות עפה למעלה! ⭐';
+
+  const nextBtn = document.getElementById('next-stage-btn');
+  const vTitle = document.getElementById('victory-title');
+  const vMsg = document.getElementById('victory-msg');
+
+  if (currentStage === 1) {
+    tmWins += 1;
+    localStorage.setItem('tm_wins', tmWins);
+    vTitle.textContent = "שלב 1 הושלם! 🏆";
+    vMsg.textContent = "כל הכבוד! קיבלת גביע 1 (🏆 +1). שלב 2 מחכה לך עם חתולים משתגרים!";
+    nextBtn.textContent = "המשך לשלב הבא (שומר על הנשק!) 🚀";
+    nextBtn.style.display = "block"; 
+  } else if (currentStage === 2) {
+    tmWins += 2;
+    localStorage.setItem('tm_wins', tmWins);
+    vTitle.textContent = "שלב 2 הושלם! 🏆🏆";
+    vMsg.textContent = "מדהים! קיבלת 2 גביעים (🏆 +2). האם תצליח לשרוד את השלב השלישי והסופי?";
+    nextBtn.textContent = "המשך לשלב 3 המטורף! 💀";
+    nextBtn.style.display = "block";
+  } else {
+    tmWins += 3;
+    localStorage.setItem('tm_wins', tmWins);
+    vTitle.textContent = "ניצחת במשחק! 🎉🏆👑";
+    vMsg.textContent = "אלוף העולם הבלתי מעורער! סיימת את שלב 3 וקיבלת עוד 3 גביעים (🏆 +3)!";
+    nextBtn.style.display = "none"; 
+  }
+}
+
+function drawCheese(x, y, r, angle, s, isRotten = false) {
+  const ctx = canvasContext;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.scale(s, s);
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+
+  ctx.beginPath();
+  const h = r * 1.6;
+  ctx.moveTo(0, -h*0.6);
+  ctx.lineTo(r*0.9, h*0.4);
+  ctx.lineTo(-r*0.9, h*0.4);
+  ctx.closePath();
+  
+  ctx.fillStyle = isRotten ? '#6b9c42' : '#EF9F27';
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = isRotten ? '#3f6123' : '#BA7517';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  const holes = [{x:-r*0.2, y:h*0.1, r:r*0.14},{x:r*0.3, y:-h*0.05, r:r*0.1},{x:-r*0.35, y:-h*0.1, r:r*0.09}];
+  holes.forEach(ho => {
+    ctx.beginPath(); ctx.arc(ho.x, ho.y, ho.r, 0, Math.PI*2);
+    ctx.fillStyle = isRotten ? '#3f6123' : '#BA7517'; ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawCat(cat) {
+  const ctx = canvasContext;
+  ctx.save();
+  ctx.translate(cat.x, cat.y);
+  ctx.rotate(cat.angle);
+  
+  if (cat.type === 'teleport') {
+    ctx.shadowColor = '#ffea00';
+    ctx.shadowBlur = 25;
+    ctx.beginPath();
+    ctx.arc(0, 0, cat.r + 3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255, 234, 0, 0.25)';
+    ctx.fill();
+    ctx.strokeStyle = '#ffea00';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    ctx.font = '32px serif';
+    ctx.fillText('🙀', 0, 0);
+  } else {
+    ctx.shadowColor = '#ff0033';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(0, 0, cat.r + 2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255, 0, 51, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#ff0033';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = '28px serif';
+    ctx.fillText('🐱', 0, 0);
+  }
+  ctx.restore();
+}
+
+function drawLaserSight() {
+  const ctx = canvasContext;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(158, 255, 74, 0.4)'; 
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]); 
+  ctx.beginPath();
+  ctx.moveTo(mx, my);
+  
+  if (weaponLevel === 3 || weaponLevel === 4) {
+    ctx.lineTo(mx + Math.cos(mouseAngle - 0.15) * 250, my + Math.sin(mouseAngle - 0.15) * 250);
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx + Math.cos(mouseAngle + 0.15) * 250, my + Math.sin(mouseAngle + 0.15) * 250);
+  } else if (weaponLevel === 5 || weaponLevel === 6) {
+    ctx.lineTo(mx + Math.cos(mouseAngle - 0.1) * 250, my + Math.sin(mouseAngle - 0.1) * 250);
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx + Math.cos(mouseAngle) * 300, my + Math.sin(mouseAngle) * 300);
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx + Math.cos(mouseAngle + 0.1) * 250, my + Math.sin(mouseAngle + 0.1) * 250);
+  } else if (weaponLevel === 7) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx + Math.cos(mouseAngle + a) * 200, my + Math.sin(mouseAngle + a) * 200);
+    }
+  } else if (weaponLevel === 8) {
+    ctx.strokeStyle = 'rgba(255, 50, 50, 0.6)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([]);
+    ctx.lineTo(mx + Math.cos(mouseAngle) * 500, my + Math.sin(mouseAngle) * 500);
+  } else {
+    ctx.lineTo(mx + Math.cos(mouseAngle) * 300, my + Math.sin(mouseAngle) * 300);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMouse(x, y, turbo) {
+  const ctx = canvasContext;
+  ctx.save();
+  if (isVictoryAnimating) {
+    ctx.shadowColor = '#ffea00';
+    ctx.shadowBlur = 30;
+  } else if (turbo > 0) {
+    const t = turbo / TURBO_DURATION;
+    ctx.shadowColor = `rgba(239, 159, 39, ${t*0.8})`;
+    ctx.shadowBlur = 20 + Math.sin(Date.now()*0.02)*8;
+  } else if (selectedChar === 'radioactive') {
+    ctx.shadowColor = '#39ff14';
+    ctx.shadowBlur = 12 + Math.sin(Date.now()*0.03)*5;
+  } else if (selectedChar === 'bike') {
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 15;
+  } else if (selectedChar === 'flying_car') {
+    ctx.shadowColor = '#ff00aa';
+    ctx.shadowBlur = 18;
+  } else if (selectedChar === 'spaceship') {
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 20;
+  }
+
+  const spd = Math.sqrt(vx*vx + vy*vy);
+  const stretch = turbo > 0 ? 1 + spd*0.03 : 1;
+  const squash = turbo > 0 ? 1 - spd*0.015 : 1;
+
+  ctx.translate(x, y);
+  if (isVictoryAnimating) {
+    ctx.rotate(victoryAngle);
+  } else {
+    ctx.rotate(mouseAngle - Math.PI/2);
+  }
+  ctx.scale(squash, stretch);
+
+  // --- דמות: גבינה צהובה עם חורים ---
+  if (selectedChar === 'cheese_char') {
+    ctx.beginPath();
+    ctx.moveTo(0, -22);
+    ctx.lineTo(18, 16);
+    ctx.lineTo(-18, 16);
+    ctx.closePath();
+    ctx.fillStyle = '#ffcc00';
+    ctx.fill();
+    ctx.strokeStyle = '#d4a373';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    const chHoles = [{x:-5, y:2, r:3}, {x:6, y:6, r:2}, {x:-3, y:10, r:2.5}, {x:2, y:-8, r:1.8}];
+    ctx.fillStyle = '#b38f00';
+    chHoles.forEach(h => {
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI*2); ctx.fill();
+    });
+    
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(-4, -3, 1.5, 0, Math.PI*2); ctx.arc(4, -3, 1.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  // --- דמות: עכבר במכונית מעופפת ---
+  if (selectedChar === 'flying_car') {
+    ctx.fillStyle = '#e0115f'; 
+    ctx.beginPath();
+    ctx.roundRect(-16, -14, 32, 28, [12, 12, 6, 6]);
+    ctx.fill();
+    ctx.strokeStyle = '#ff00aa';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.5)';
+    ctx.beginPath();
+    ctx.roundRect(-10, -6, 20, 12, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#00ffcc';
+    ctx.fillRect(-19, -8, 3, 6);
+    ctx.fillRect(16, -8, 3, 6);
+    ctx.fillRect(-19, 4, 3, 6);
+    ctx.fillRect(16, 4, 3, 6);
+
+    ctx.fillStyle = '#d1cfe2';
+    ctx.beginPath();
+    ctx.arc(0, -1, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffb3b3';
+    ctx.beginPath();
+    ctx.arc(-5, -4, 2.5, 0, Math.PI * 2);
+    ctx.arc(5, -4, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  // --- דמות: חללית קוסמית ---
+  if (selectedChar === 'spaceship') {
+    ctx.fillStyle = '#1f3a60';
+    ctx.beginPath();
+    ctx.moveTo(0, -25);
+    ctx.lineTo(14, 12);
+    ctx.lineTo(6, 16);
+    ctx.lineTo(-6, 16);
+    ctx.lineTo(-14, 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#00ffcc';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#0e1e38';
+    ctx.beginPath();
+    ctx.moveTo(-14, 4);
+    ctx.lineTo(-24, 14);
+    ctx.lineTo(-12, 12);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(14, 4);
+    ctx.lineTo(24, 14);
+    ctx.lineTo(12, 12);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, -4, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    return;
+  }
+
+  // --- דמות: עכבר על אופנוע מעופף ---
+  if (selectedChar === 'bike') {
+    ctx.fillStyle = '#3a3d52';
+    ctx.fillRect(-8, -5, 16, 22);
+    ctx.fillStyle = '#00e5ff'; 
+    ctx.fillRect(-11, 2, 3, 10);
+    ctx.fillRect(8, 2, 3, 10);
+    ctx.fillStyle = '#1f2029';
+    ctx.fillRect(-6, 17, 4, 6);
+    ctx.fillRect(2, 17, 4, 6);
+    if (Math.random() > 0.3) { 
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-6, 23, 4, 5 + Math.random()*5);
+      ctx.fillRect(2, 23, 4, 5 + Math.random()*5);
+    }
+  }
+
+  // --- גוף בסיסי לעכברים השונים ---
+  const bw = 22, bh = 32, br = 10;
+  const bx = -bw/2, by = -bh*0.35;
+  ctx.beginPath();
+  ctx.moveTo(bx+br, by);
+  ctx.lineTo(bx+bw-br, by);
+  ctx.quadraticCurveTo(bx+bw, by, bx+bw, by+br);
+  ctx.lineTo(bx+bw, by+bh-br);
+  ctx.quadraticCurveTo(bx+bw, by+bh, 0, by+bh+4);
+  ctx.quadraticCurveTo(bx, by+bh, bx, by+bh-br);
+  ctx.lineTo(bx, by+br);
+  ctx.quadraticCurveTo(bx, by, bx+br, by);
+  ctx.closePath();
+
+  if (isVictoryAnimating) {
+    ctx.fillStyle = '#ffea00';
+  } else if (turbo > 0) {
+    const t = turbo/TURBO_DURATION;
+    ctx.fillStyle = `hsl(${30+t*20}, 90%, ${70+t*10}%)`;
+  } else {
+    if (selectedChar === 'mouse') {
+      ctx.fillStyle = '#b0aac2'; 
+    } else if (selectedChar === 'realistic') {
+      ctx.fillStyle = '#8a8581'; 
+    } else if (selectedChar === 'radioactive') {
+      ctx.fillStyle = '#20cc10'; 
+    } else if (selectedChar === 'bike') {
+      ctx.fillStyle = '#cdcae0'; 
+    } else if (selectedChar === 'cat_costume') {
+      ctx.fillStyle = '#3a3a3a'; 
+    }
+  }
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  
+  ctx.strokeStyle = turbo > 0 ? '#BA7517' : (selectedChar === 'radioactive' ? '#39ff14' : (selectedChar === 'cat_costume' ? '#ff7300' : '#b8b4cc'));
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  if (selectedChar === 'cat_costume' && !isVictoryAnimating && turbo <= 0) {
+    ctx.fillStyle = '#ff7300';
+    ctx.beginPath();
+    ctx.moveTo(-11, by+4); ctx.lineTo(-15, by-4); ctx.lineTo(-4, by+1); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(11, by+4); ctx.lineTo(15, by-4); ctx.lineTo(4, by+1); ctx.fill();
+    
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-4, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, 0); ctx.stroke();
+  }
+
+  if (selectedChar !== 'cat_costume') {
+    ctx.beginPath(); ctx.moveTo(0, by+1); ctx.lineTo(0, by+13);
+    ctx.strokeStyle = turbo > 0 ? '#EF9F27' : (selectedChar === 'radioactive' ? '#39ff14' : '#c0bcd8');
+    ctx.lineWidth = 0.8; ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.roundRect(-3, by+9, 6, 10, 3);
+  ctx.fillStyle = turbo > 0 ? '#EF9F27' : (selectedChar === 'radioactive' ? '#ff3300' : (selectedChar === 'cat_costume' ? '#ffccd5' : '#a09cc0'));
+  ctx.fill();
+
+  if (turbo > 0) {
+    ctx.font = '7px serif'; ctx.fillStyle = '#BA7517'; ctx.textAlign = 'center';
+    ctx.fillText('★', -5, by+7); ctx.fillText('★', 5, by+7);
+  } else {
+    ctx.beginPath();
+    ctx.arc(-5, by+5, 1.5, 0, Math.PI*2); ctx.arc(5, by+5, 1.5, 0, Math.PI*2);
+    ctx.fillStyle = selectedChar === 'radioactive' ? '#39ff14' : (selectedChar === 'cat_costume' ? '#00ffcc' : '#9994b8'); ctx.fill();
+  }
+
+  ctx.beginPath(); ctx.moveTo(0, by+bh+4);
+  const curl = turbo > 0 ? 20 : 12;
+  ctx.quadraticCurveTo(18, by+bh+10, curl, by+bh+20);
+  ctx.strokeStyle = turbo > 0 ? '#EF9F27' : (selectedChar === 'realistic' ? '#ffb3b3' : (selectedChar === 'cat_costume' ? '#ff7300' : '#c0bcd8'));
+  ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
+
+  if (selectedChar === 'realistic') {
+    ctx.strokeStyle = '#eee'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(-6, by+4); ctx.lineTo(-14, by+2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6, by+6); ctx.lineTo(-15, by+6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6, by+4); ctx.lineTo(14, by+2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6, by+6); ctx.lineTo(15, by+6); ctx.stroke();
+  }
+  
+  if (selectedChar === 'bike') {
+    ctx.fillStyle = '#ff3366';
+    ctx.beginPath();
+    ctx.arc(0, by+4, 6, Math.PI, 0);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawTrail() {
+  const ctx = canvasContext;
+  if (trail.length < 2) return;
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (let i = 1; i < trail.length; i++) {
+    const t = i / trail.length;
+    ctx.globalAlpha = 0.15 + t * 0.85;
+    ctx.lineWidth = (1 + t * 6) + Math.sin(frame * 0.1 + i * 0.2) * 1.5;
+    const p = trail[i];
+    if (p.turbo) {
+      ctx.strokeStyle = `hsl(${(frame * 2 + i * 5) % 360}, 100%, 65%)`;
+    } else {
+      ctx.strokeStyle = `hsl(${(frame * 1.5 + i * 8) % 360}, 90%, 60%)`;
+    }
+    ctx.beginPath(); ctx.moveTo(trail[i-1].x, trail[i-1].y); ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawParticles() {
+  const ctx = canvasContext;
+  particles.forEach(p => {
+    ctx.save(); 
+    ctx.globalAlpha = p.life; 
+    
+    if (p.type === 'mouse_emoji') {
+      ctx.font = `${p.size * p.life}px serif`;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillText('🐭', 0, 0);
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2); ctx.fill();
+    }
+    
+    ctx.restore();
+  });
+}
+
+function drawWAttackVisual() {
+  const ctx = canvasContext;
+  if (!wAttackVisual.active) return;
+  ctx.save();
+  const alpha = 1 - (wAttackVisual.radius / wAttackVisual.maxRadius);
+  ctx.strokeStyle = `rgba(158, 255, 74, ${alpha})`; ctx.lineWidth = 6;
+  ctx.shadowColor = '#9EFF4A'; ctx.shadowBlur = 15;
+  ctx.beginPath(); ctx.arc(wAttackVisual.x, wAttackVisual.y, wAttackVisual.radius, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawSpaceBackground() {
+  const ctx = canvasContext;
+  ctx.fillStyle = '#06040a'; ctx.fillRect(0, 0, W, H);
+  const gradient = ctx.createRadialGradient(W/2 + Math.sin(frame*0.005)*100, H/2 + Math.cos(frame*0.006)*80, 10, W/2, H/2, Math.max(W,H)*0.8);
+  const hueShift = (frame * 0.15) % 360;
+  gradient.addColorStop(0, `hsla(${hueShift}, 70%, 15%, 0.45)`);
+  gradient.addColorStop(0.5, `hsla(${(hueShift + 120) % 360}, 60%, 10%, 0.25)`);
+  gradient.addColorStop(1, 'rgba(6, 4, 10, 1)');
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
+
+  ctx.save(); ctx.strokeStyle = 'rgba(74, 55, 128, 0.12)'; ctx.lineWidth = 1;
+  const gridSpacing = 40; const offset = (frame * 0.5) % gridSpacing;
+  for (let x = offset; x < W; x += gridSpacing) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = offset; y < H; y += gridSpacing) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.restore();
+
+  stars.forEach(s => {
+    const alpha = 0.3 + 0.6*Math.sin(s.blink + frame*0.04);
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#d8d5f2';
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  });
+}
+
+let lastTrailPt = {x:mx, y:my};
+let frame = 0;
+
+function update() {
+  if (isGameOver || isPaused || document.getElementById('start-screen').style.display !== 'none') return; 
+
+  frame++;
+  const target = getTargetGoal();
+
+  if (isVictoryAnimating) {
+    victoryTimer--;
+    victoryAngle += 0.08; 
+    my -= 1.2; 
+    
+    if (frame % 3 === 0) {
+      particles.push({
+        type: 'sparkle',
+        x: mx + (Math.random() - 0.5) * 20,
+        y: my + 15,
+        vx: (Math.random() - 0.5) * 2,
+        vy: 2,
+        life: 0.8, decay: 0.02, r: 2 + Math.random() * 3,
+        color: '#ffea00'
+      });
+    }
+
+    if (victoryTimer <= 0) {
+      isVictoryAnimating = false;
+      document.getElementById('victory-screen').style.display = 'flex';
+    }
+    return; 
+  }
+
+  const spd = turboTimer > 0 ? baseSpeed * 3.5 : baseSpeed;
+  const friction = 0.75;
+  const accel = turboTimer > 0 ? 1.4 : 0.7;
+
+  if (keys['ArrowUp'])    vy -= accel;
+  if (keys['ArrowDown'])  vy += accel;
+  if (keys['ArrowLeft'])  vx -= accel;
+  if (keys['ArrowRight']) vx += accel;
+
+  if (!keys['ArrowLeft'] && !keys['ArrowRight']) vx *= friction;
+  if (!keys['ArrowUp'] && !keys['ArrowDown'])    vy *= friction;
+
+  const maxV = spd; const mag = Math.sqrt(vx*vx+vy*vy);
+  if (mag > maxV) { vx = vx/mag*maxV; vy = vy/mag*maxV; }
+
+  mx = Math.max(12, Math.min(W-12, mx + vx));
+  my = Math.max(12, Math.min(H-12, my + vy));
+
+  if (mx <= 12 || mx >= W-12) vx *= -0.5;
+  if (my <= 12 || my >= H-12) vy *= -0.5;
+  if (mag > 0.5) { mouseAngle = Math.atan2(vy, vx); }
+
+  const dx = mx - lastTrailPt.x, dy = my - lastTrailPt.y;
+  if (Math.sqrt(dx*dx+dy*dy) > 2) {
+    trail.push({x:mx, y:my, turbo: turboTimer > 0});
+    lastTrailPt = {x:mx, y:my};
+    if (trail.length > 40) trail.shift(); 
+    
+    if (frame % 2 === 0) {
+      if (selectedChar === 'spaceship') {
+        const oppositeAngle = mouseAngle + Math.PI;
+        particles.push({
+          type: 'mouse_emoji',
+          x: mx + Math.cos(oppositeAngle) * 12,
+          y: my + Math.sin(oppositeAngle) * 12,
+          vx: Math.cos(oppositeAngle + (Math.random() - 0.5) * 0.5) * (2 + Math.random() * 2),
+          vy: Math.sin(oppositeAngle + (Math.random() - 0.5) * 0.5) * (2 + Math.random() * 2),
+          life: 1.0,
+          decay: 0.03,
+          size: 11 + Math.random() * 6,
+          angle: Math.random() * Math.PI * 2
+        });
+      } else {
+        particles.push({
+          type: 'sparkle',
+          x: mx + (Math.random()-0.5)*8, y: my + (Math.random()-0.5)*8,
+          vx: (Math.random()-0.5)*1, vy: (Math.random()-0.5)*1,
+          life: 0.6, decay: 0.04, r: 1.5 + Math.random()*2,
+          color: `hsl(${(frame * 2) % 360}, 100%, 70%)`
+        });
+      }
+    }
+  }
+
+  if (turboTimer > 0) turboTimer--;
+
+  if (wAttackVisual.active) {
+    wAttackVisual.radius += 25;
+    if (wAttackVisual.radius >= wAttackVisual.maxRadius) { wAttackVisual.active = false; }
+  }
+
+  particles.forEach(p => { 
+    p.x += p.vx; 
+    p.y += p.vy; 
+    p.life -= p.decay; 
+    if (p.type === 'mouse_emoji') p.angle += 0.05;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  rottenCheeses.forEach(rc => { rc.x += rc.vx; rc.y += rc.vy; rc.angle += 0.1; });
+  rottenCheeses = rottenCheeses.filter(rc => rc.x > 0 && rc.x < W && rc.y > 0 && rc.y < H);
+
+  enemyProjectiles.forEach(ep => { ep.x += ep.vx; ep.y += ep.vy; });
+  enemyProjectiles = enemyProjectiles.filter(ep => ep.x > 0 && ep.x < W && ep.y > 0 && ep.y < H);
+
+  enemyProjectiles.forEach((ep, epIdx) => {
+    const pDx = mx - ep.x; const pDy = my - ep.y; const pDist = Math.sqrt(pDx*pDx + pDy*pDy);
+    if (pDist < ep.r + 12) {
+      enemyProjectiles.splice(epIdx, 1);
+      handleCatHit();
+    }
+  });
+
+  cats.forEach((cat) => {
+    if (cat.type === 'teleport') {
+      cat.shootTimer--;
+
+      const tDx = mx - cat.x; const tDy = my - cat.y;
+      cat.angle = Math.atan2(tDy, tDx);
+
+      if (cat.shootTimer <= 0) {
+        cat.shootTimer = 120; 
+        const angleToPlayer = Math.atan2(my - cat.y, mx - cat.x);
+        enemyProjectiles.push({
+          x: cat.x, y: cat.y,
+          vx: Math.cos(angleToPlayer) * 4.5, 
+          vy: Math.sin(angleToPlayer) * 4.5,
+          r: 6
+        });
+      }
+    } else {
+      const catDx = mx - cat.x; const catDy = my - cat.y; const catDist = Math.sqrt(catDx*catDx + catDy*catDy);
+      cat.angle = Math.atan2(catDy, catDx);
+      if (catDist > 0) { cat.x += (catDx / catDist) * cat.speed; cat.y += (catDy / catDist) * cat.speed; }
+    }
+
+    const distToPlayer = Math.sqrt((mx - cat.x)**2 + (my - cat.y)**2);
+    if (distToPlayer < cat.r + 12) { handleCatHit(); }
+  });
+
+  rottenCheeses.forEach((rc, rcIdx) => {
+    cats.forEach((cat, catIdx) => {
+      const cDx = rc.x - cat.x; const cDy = rc.y - cat.y; const cDist = Math.sqrt(cDx*cDx + cDy*cDy);
+      if (cDist < rc.r + cat.r) {
+        playSound('hit'); burst(cat.x, cat.y, true);
+        cats.splice(catIdx, 1); 
+        if (weaponLevel !== 8) rottenCheeses.splice(rcIdx, 1); 
+        
+        catScore++; 
+        document.getElementById('cats-display').textContent = `😾 חתולים שהובסו: ${catScore} / ${target}`;
+        
+        if (score >= target && catScore >= target) {
+          triggerStageVictory();
+        }
+      }
+    });
+  });
+
+  cheeses.forEach(ch => {
+    if (ch.collected) return;
+    const dx = mx - ch.x, dy = my - ch.y;
+    if (Math.sqrt(dx*dx+dy*dy) < ch.r + 14) {
+      playSound('eat'); ch.collected = true;
+      turboTimer = TURBO_DURATION; burst(ch.x, ch.y);
+      score++;
+      document.getElementById('score-display').textContent = `🧀 גבינות: ${score} / ${target}`;
+      checkWeaponUpgrade(); 
+      document.getElementById('status').textContent = '⚡ טורבו! ⚡';
+      setTimeout(() => { if (turboTimer <= 0) document.getElementById('status').textContent = ''; }, TURBO_DURATION * 16);
+      setTimeout(spawnCheese, 800);
+
+      if (score >= target && catScore >= target) {
+        triggerStageVictory();
+      }
+    }
+    if (ch.scale < 1) ch.scale = Math.min(1, ch.scale + 0.06);
+  });
+
+  cheeses.forEach(ch => { ch.bobPhase += 0.04; });
+}
+
+function render() {
+  if (document.getElementById('start-screen').style.display !== 'none') return;
+  const ctx = canvasContext;
+
+  drawSpaceBackground(); 
+
+  if (turboTimer > 0 && !isVictoryAnimating) {
+    const t = (turboTimer/TURBO_DURATION)*0.08;
+    ctx.fillStyle = `rgba(239,159,39,${t})`; ctx.fillRect(0,0,W,H);
+  }
+
+  drawTrail();
+  if (!isGameOver && !isPaused && !isVictoryAnimating) drawLaserSight();
+  drawWAttackVisual();
+  drawParticles();
+
+  rottenCheeses.forEach(rc => { drawCheese(rc.x, rc.y, rc.r, rc.angle, 1, true); });
+  
+  enemyProjectiles.forEach(ep => {
+    ctx.save();
+    ctx.shadowColor = '#ffea00'; ctx.shadowBlur = 10;
+    ctx.fillStyle = '#fffb00';
+    ctx.beginPath(); ctx.arc(ep.x, ep.y, ep.r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  cats.forEach(drawCat);
+
+  cheeses.forEach(ch => {
+    if (ch.collected) return;
+    const bob = Math.sin(ch.bobPhase) * 3;
+    drawCheese(ch.x, ch.y + bob, ch.r, ch.angle, ch.scale);
+  });
+
+  drawMouse(mx, my, turboTimer);
+
+  if (turboTimer > 0 && !isVictoryAnimating) {
+    const t = turboTimer/TURBO_DURATION;
+    ctx.save(); ctx.fillStyle = 'rgba(239,159,39,0.85)'; ctx.fillRect(16, 16, 120*t, 8);
+    ctx.strokeStyle = '#BA7517'; ctx.lineWidth = 0.5; ctx.strokeRect(16, 16, 120, 8); ctx.restore();
+  }
+}
+
+function loop() {
+  if (!isPaused && !isGameOver) {
+    update();
+  }
+  render(); 
+  requestAnimationFrame(loop);
+}
+
+function handleGlobalKeyDown(e) {
+  if (!cheatUsed) {
+    cheatInputBuffer += e.key.toUpperCase();
+    if (cheatInputBuffer.endsWith("AEEAEE")) {
+      cheatUsed = true;
+      tmWins += 2;
+      localStorage.setItem('tm_wins', tmWins);
+      document.getElementById('lobby-trophies').textContent = `🏆 גביעים שצברת: ${tmWins}`;
+      playSound('upgrade');
+      
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) {
+        statusDiv.textContent = '🔓 קוד סודי הופעל! קיבלת 2 גביעים בונוס!';
+        setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+      }
+    }
+    if (cheatInputBuffer.length > 20) {
+      cheatInputBuffer = cheatInputBuffer.substring(10);
+    }
+  }
+
+  if (document.getElementById('start-screen').style.display !== 'none') return; 
+  if (isGameOver || isVictoryAnimating) return;
+
+  if (e.key === 'p' || e.key === 'P' || e.code === 'KeyP') {
+    e.preventDefault();
+    togglePause();
+    return;
+  }
+
+  if (isPaused) return; 
+
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) { e.preventDefault(); keys[e.key]=true; }
+  if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); shootRottenCheese(); }
+  if (e.key === 'w' || e.key === 'W' || e.code === 'KeyW') { e.preventDefault(); triggerWAttack(); }
+}
+
+document.addEventListener('keydown', handleGlobalKeyDown);
+document.addEventListener('keyup', e => { 
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) { keys[e.key]=false; }
+});
+
+// אתחול ראשוני
+renderMenu();
+loop();
+</script>
+</body>
+</html>
